@@ -1,5 +1,5 @@
 // Tela 6 — Perfil
-// Responsável: Daniel Augusto Gonçalves
+// Responsável: Vitória Campos
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

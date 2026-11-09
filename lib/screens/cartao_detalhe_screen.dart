@@ -1,5 +1,5 @@
 // Detalhe do cartão de crédito (aberto pela Carteira)
-// Responsável: Daniel Augusto Gonçalves
+// Responsável: Sofia Purcino
 
 import 'package:flutter/material.dart';
 

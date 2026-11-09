@@ -12,7 +12,6 @@
 | Sofia Purcino Campelo | 72500280 | 72500280@aluno.faculdadecotemig.br |
 | Theo Purcino Campelo | 72500271 | 72500271@aluno.faculdadecotemig.br |
 | Rafael Penna | 72500824 | 72500824@aluno.faculdadecotemig.br |
-| Daniel Augusto Gonçalves | _preencher_ | _preencher_ |
 
 ## 2. Sobre o projeto
 
@@ -100,14 +99,12 @@ lib/
 test/                  Testes de widget (fluxo) e dos providers (persistência, API ok/erro)
 ```
 
-| Tela | Arquivo | Responsável |
+| Responsável | Telas | Arquivos |
 |---|---|---|
-| Login | `login_screen.dart`, `main_shell.dart` | Vitória Campos |
-| Início | `home_screen.dart`, `transacao_detalhe_screen.dart` | Sofia Purcino |
-| Adicionar | `adicionar_screen.dart` | Theo Purcino |
-| Análises | `analises_screen.dart` | Rafael Penna |
-| Calendário | `calendario_screen.dart`, `agendar_conta_screen.dart` | Rafael Penna |
-| Perfil / Carteira | `perfil_screen.dart`, `editar_perfil_screen.dart`, `carteira_screen.dart`, `cartao_detalhe_screen.dart` | Daniel Augusto Gonçalves |
+| Vitória Campos | Login, menu inferior, Perfil | `login_screen.dart`, `main_shell.dart`, `perfil_screen.dart` |
+| Sofia Purcino | Início, Detalhe da movimentação, Detalhe do cartão | `home_screen.dart`, `transacao_detalhe_screen.dart`, `cartao_detalhe_screen.dart` |
+| Theo Purcino | Adicionar, Editar perfil, Carteira | `adicionar_screen.dart`, `editar_perfil_screen.dart`, `carteira_screen.dart` |
+| Rafael Penna | Análises, Calendário, Agendar conta | `analises_screen.dart`, `calendario_screen.dart`, `agendar_conta_screen.dart` |
 
 ## 8. Observações
 

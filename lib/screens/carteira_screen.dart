@@ -1,5 +1,5 @@
 // Carteira: contas bancárias e cartões de crédito (aberta pelo Perfil)
-// Responsável: Daniel Augusto Gonçalves
+// Responsável: Theo Purcino
 
 import 'package:flutter/material.dart';
 

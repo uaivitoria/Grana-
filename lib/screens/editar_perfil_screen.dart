@@ -1,5 +1,5 @@
 // Editar perfil: dados pessoais, endereço (CEP via ViaCEP) e moeda padrão
-// Responsável: Daniel Augusto Gonçalves
+// Responsável: Theo Purcino
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
