@@ -8,10 +8,10 @@
 
 | Integrante | Matrícula | Contato |
 |---|---|---|
-| Vitória Campos | _preencher_ | _preencher_ |
-| Sofia Purcino | _preencher_ | _preencher_ |
-| Theo Purcino | _preencher_ | _preencher_ |
-| Rafael Penna | _preencher_ | _preencher_ |
+| Vitória Campos | 72401290 | 72401290@aluno.faculdadecotemig.br |
+| Sofia Purcino Campelo | 72500280 | 72500280@aluno.faculdadecotemig.br |
+| Theo Purcino Campelo | 72500271 | 72500271@aluno.faculdadecotemig.br |
+| Rafael Penna | 72500824 | 72500824@aluno.faculdadecotemig.br |
 | Daniel Augusto Gonçalves | _preencher_ | _preencher_ |
 
 ## 2. Sobre o projeto
