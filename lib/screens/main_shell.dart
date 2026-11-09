@@ -20,13 +20,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _abaAtual = 0;
 
-  static const _telas = [
-    HomeScreen(),
-    AnalisesScreen(),
-    CalendarioScreen(),
-    PerfilScreen(),
-  ];
-
   void _abrirAdicionar() {
     Navigator.push(
       context,
@@ -37,7 +30,15 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _abaAtual, children: _telas),
+      body: IndexedStack(
+        index: _abaAtual,
+        children: [
+          const HomeScreen(),
+          AnalisesScreen(onVoltarInicio: () => setState(() => _abaAtual = 0)),
+          const CalendarioScreen(),
+          const PerfilScreen(),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirAdicionar,
         tooltip: 'Adicionar',
@@ -55,7 +56,13 @@ class _MainShellState extends State<MainShell> {
         child: Row(
           children: [
             _itemMenu(0, Icons.home_outlined, Icons.home, 'Início'),
-            _itemMenu(1, Icons.bar_chart_outlined, Icons.bar_chart, 'Análises'),
+            _itemMenu(
+              1,
+              Icons.bar_chart_outlined,
+              Icons.bar_chart,
+              'Análises',
+              emBreve: true,
+            ),
             const SizedBox(width: 72),
             _itemMenu(
               2,
@@ -70,7 +77,13 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _itemMenu(int indice, IconData icone, IconData iconeAtivo, String rotulo) {
+  Widget _itemMenu(
+    int indice,
+    IconData icone,
+    IconData iconeAtivo,
+    String rotulo, {
+    bool emBreve = false,
+  }) {
     final ativo = _abaAtual == indice;
     final cor = ativo ? AppColors.primary : AppColors.mutedForeground;
     return Expanded(
@@ -79,7 +92,13 @@ class _MainShellState extends State<MainShell> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(ativo ? iconeAtivo : icone, color: cor),
+            Badge(
+              isLabelVisible: emBreve,
+              backgroundColor: AppColors.secondary,
+              textColor: AppColors.foreground,
+              label: const Text('breve', style: TextStyle(fontSize: 8)),
+              child: Icon(ativo ? iconeAtivo : icone, color: cor),
+            ),
             const SizedBox(height: 2),
             Text(
               rotulo,

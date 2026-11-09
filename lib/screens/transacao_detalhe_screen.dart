@@ -2,8 +2,10 @@
 // Responsável: Sofia Purcino
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dados_fake.dart';
+import '../providers/transacoes_provider.dart';
 import '../theme/app_theme.dart';
 
 class TransacaoDetalheScreen extends StatelessWidget {
@@ -62,23 +64,52 @@ class TransacaoDetalheScreen extends StatelessWidget {
                     t.formaPagamento),
                 if (t.cartao != null)
                   _linha(Icons.credit_card, 'Cartão', t.cartao!),
-                _linha(Icons.currency_exchange, 'Moeda', 'BRL — Real'),
+                _linha(Icons.currency_exchange, 'Moeda', t.moeda),
+                if (t.valorOriginal != null)
+                  _linha(Icons.payments, 'Valor original',
+                      '${t.moeda} ${t.valorOriginal!.toStringAsFixed(2).replaceAll('.', ',')}'),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edição na próxima etapa.')),
-              );
-            },
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Editar movimentação'),
+          // Só lançamentos da lista do Início podem ser excluídos.
+          if (context.watch<TransacoesProvider>().contem(t))
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: () => _confirmarExclusao(context),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Excluir movimentação'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmarExclusao(BuildContext context) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('Excluir movimentação?'),
+        content: Text('"${transacao.titulo}" será removida.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Excluir'),
           ),
         ],
       ),
     );
+    if (confirmou != true || !context.mounted) return;
+    final navigator = Navigator.of(context);
+    await context.read<TransacoesProvider>().remover(transacao);
+    navigator.pop();
   }
 
   Widget _linha(IconData icone, String rotulo, String valor) {

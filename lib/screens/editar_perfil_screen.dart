@@ -1,9 +1,12 @@
-// Editar perfil: dados pessoais, endereço (CEP) e moeda padrão
+// Editar perfil: dados pessoais, endereço (CEP via ViaCEP) e moeda padrão
 // Responsável: Daniel Augusto Gonçalves
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dados_fake.dart';
+import '../providers/perfil_provider.dart';
+import '../theme/app_theme.dart';
 
 class EditarPerfilScreen extends StatefulWidget {
   const EditarPerfilScreen({super.key});
@@ -14,17 +17,75 @@ class EditarPerfilScreen extends StatefulWidget {
 
 class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   final _formKey = GlobalKey<FormState>();
-  String _moeda = 'BRL';
+  late final TextEditingController _nome;
+  late final TextEditingController _email;
+  late final TextEditingController _telefone;
+  late final TextEditingController _cep;
+  late final TextEditingController _endereco;
+  late String _moeda;
 
-  void _salvar() {
+  bool _buscandoCep = false;
+  String? _erroCep;
+
+  @override
+  void initState() {
+    super.initState();
+    final perfil = context.read<PerfilProvider>();
+    _nome = TextEditingController(text: perfil.nome);
+    _email = TextEditingController(text: perfil.email);
+    _telefone = TextEditingController(text: perfil.telefone);
+    _cep = TextEditingController(text: perfil.cep);
+    _endereco = TextEditingController(text: perfil.endereco);
+    _moeda = perfil.moeda;
+  }
+
+  @override
+  void dispose() {
+    _nome.dispose();
+    _email.dispose();
+    _telefone.dispose();
+    _cep.dispose();
+    _endereco.dispose();
+    super.dispose();
+  }
+
+  Future<void> _buscarCep() async {
+    setState(() {
+      _buscandoCep = true;
+      _erroCep = null;
+    });
+    try {
+      final endereco =
+          await context.read<PerfilProvider>().buscarCep(_cep.text);
+      _endereco.text = endereco.resumo;
+    } catch (e) {
+      _erroCep = e.toString().replaceFirst('Exception: ', '');
+      if (_erroCep!.contains('TimeoutException') ||
+          _erroCep!.contains('ClientException') ||
+          _erroCep!.contains('SocketException')) {
+        _erroCep = 'Sem conexão com o ViaCEP. Tente de novo.';
+      }
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
+  }
+
+  Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
-    // Etapa 2: não salva nem consulta o ViaCEP.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Perfil salvo (fictício — gravação na próxima etapa).'),
-      ),
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    await context.read<PerfilProvider>().salvar(
+          nome: _nome.text.trim(),
+          email: _email.text.trim(),
+          telefone: _telefone.text.trim(),
+          cep: _cep.text.trim(),
+          endereco: _endereco.text.trim(),
+          moeda: _moeda,
+        );
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Perfil salvo.')),
     );
-    Navigator.pop(context);
+    navigator.pop();
   }
 
   @override
@@ -37,7 +98,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             TextFormField(
-              initialValue: perfilNome,
+              controller: _nome,
               decoration: const InputDecoration(
                 labelText: 'Nome completo',
                 prefixIcon: Icon(Icons.person_outline),
@@ -48,7 +109,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: perfilEmail,
+              controller: _email,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'E-mail',
@@ -66,7 +127,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: perfilTelefone,
+              controller: _telefone,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'Telefone',
@@ -80,13 +141,30 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
-              initialValue: perfilCep,
+              controller: _cep,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              onFieldSubmitted: (_) => _buscarCep(),
+              decoration: InputDecoration(
                 labelText: 'CEP',
                 hintText: '00000-000',
-                helperText: 'O preenchimento automático vem na próxima etapa.',
-                prefixIcon: Icon(Icons.location_on_outlined),
+                helperText: 'Toque na lupa para preencher o endereço.',
+                errorText: _erroCep,
+                prefixIcon: const Icon(Icons.location_on_outlined),
+                suffixIcon: _buscandoCep
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        tooltip: 'Buscar CEP',
+                        icon: const Icon(Icons.search,
+                            color: AppColors.primary),
+                        onPressed: _buscarCep,
+                      ),
               ),
               validator: (texto) {
                 final digitos = (texto ?? '').replaceAll(RegExp(r'\D'), '');
@@ -96,7 +174,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: perfilEndereco,
+              controller: _endereco,
               decoration: const InputDecoration(
                 labelText: 'Rua, número, bairro e cidade',
                 prefixIcon: Icon(Icons.home_outlined),

@@ -2,7 +2,10 @@
 // Responsável: Vitória Campos
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/perfil_provider.dart';
+import '../providers/sessao_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/grana_logo.dart';
 import 'main_shell.dart';
@@ -27,9 +30,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _entrar() {
+  Future<void> _entrar() async {
+    final sessao = context.read<SessaoProvider>();
+    if (sessao.entrando) return;
     if (!_formKey.currentState!.validate()) return;
-    // Etapa 2: sem API do Cotemig ainda. Só avança para o Início.
+    final perfil = context.read<PerfilProvider>();
+
+    // POST /autenticacao na API do Cotemig (com loading e erro na tela).
+    final login =
+        await sessao.entrar(_usuarioController.text, _senhaController.text);
+    if (login == null) return; // erro já aparece no formulário
+    await perfil.preencherDoCotemig(nome: login.nome, email: login.email);
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const MainShell()),
@@ -38,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sessao = context.watch<SessaoProvider>();
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -116,9 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (valor == null || valor.isEmpty) {
                                   return 'Informe sua senha.';
                                 }
-                                if (valor.length < 4) {
-                                  return 'A senha precisa ter pelo menos 4 caracteres.';
-                                }
                                 return null;
                               },
                             ),
@@ -138,11 +148,45 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
+                            if (sessao.erro != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_outline,
+                                        color: AppColors.error, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        sessao.erro!,
+                                        style: const TextStyle(
+                                            color: AppColors.error),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             FilledButton.icon(
-                              onPressed: _entrar,
+                              onPressed: sessao.entrando ? null : _entrar,
                               iconAlignment: IconAlignment.end,
-                              icon: const Icon(Icons.arrow_forward),
-                              label: const Text('Entrar'),
+                              icon: sessao.entrando
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_forward),
+                              label: Text(
+                                  sessao.entrando ? 'Entrando…' : 'Entrar'),
                             ),
                             const SizedBox(height: 16),
                             Container(
@@ -152,8 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
-                                'Modo demonstração: qualquer usuário e senha '
-                                'válidos entram. Nenhum dado é enviado.',
+                                'Use o mesmo usuário e senha do Portal Cotemig. '
+                                'A senha não fica salva no aparelho.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.mutedForeground,

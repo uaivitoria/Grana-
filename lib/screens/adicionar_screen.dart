@@ -2,8 +2,11 @@
 // Responsável: Theo Purcino
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dados_fake.dart';
+import '../providers/cotacoes_provider.dart';
+import '../providers/transacoes_provider.dart';
 import '../theme/app_theme.dart';
 
 class AdicionarScreen extends StatefulWidget {
@@ -84,28 +87,50 @@ class _AdicionarScreenState extends State<AdicionarScreen> {
     );
   }
 
-  void _salvar() {
+  Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
-    // Etapa 2: não grava nem chama API. Só confirma e volta.
-    ScaffoldMessenger.of(context).showSnackBar(
+
+    final valor = _valorDigitado!;
+    final taxa = context.read<CotacoesProvider>().valorEmReais(_moeda);
+    final emReais = valor * taxa;
+    final hoje = DateTime.now();
+    final data = '${hoje.day.toString().padLeft(2, '0')}/'
+        '${hoje.month.toString().padLeft(2, '0')}/${hoje.year}';
+
+    final transacao = Transacao(
+      titulo: _descricaoController.text.trim(),
+      categoria: _categoria!,
+      data: data,
+      valor: _isDespesa ? -emReais : emReais,
+      formaPagamento: _pagamento,
+      cartao: _pagamento == 'Crédito' ? _cartao : null,
+      icone: iconeDaCategoria(_categoria!),
+      moeda: _moeda.codigo,
+      valorOriginal: _moeda.codigo == 'BRL' ? null : valor,
+    );
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    // Provider adiciona na lista e salva no SharedPreferences.
+    await context.read<TransacoesProvider>().adicionar(transacao);
+
+    messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          _isDespesa
-              ? 'Despesa lançada (fictício — gravação na próxima etapa).'
-              : 'Receita lançada (fictício — gravação na próxima etapa).',
-        ),
+        content: Text(_isDespesa ? 'Despesa lançada.' : 'Receita lançada.'),
       ),
     );
-    Navigator.pop(context);
+    navigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final cotacoes = context.watch<CotacoesProvider>();
     final categorias = _isDespesa ? categoriasDespesa : categoriasReceita;
     final valor = _valorDigitado;
-    final convertido = (valor != null && _moeda.codigo != 'BRL')
-        ? valor * _moeda.cotacaoEmReais
-        : null;
+    final taxa = cotacoes.valorEmReais(_moeda);
+    final aoVivo = cotacoes.temCotacaoAoVivo(_moeda.codigo);
+    final convertido =
+        (valor != null && _moeda.codigo != 'BRL') ? valor * taxa : null;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Novo lançamento')),
@@ -193,8 +218,8 @@ class _AdicionarScreenState extends State<AdicionarScreen> {
                 ),
                 child: Text(
                   '≈ ${formatarReais(convertido)} · '
-                  'Taxa fixa: 1 ${_moeda.codigo} = '
-                  '${formatarReais(_moeda.cotacaoEmReais)}',
+                  '${aoVivo ? 'Cotação de hoje (AwesomeAPI)' : 'Taxa de referência (API indisponível)'}: '
+                  '1 ${_moeda.codigo} = ${formatarReais(taxa)}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.mutedForeground,

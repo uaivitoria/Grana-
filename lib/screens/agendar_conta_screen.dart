@@ -2,6 +2,10 @@
 // Responsável: Rafael Penna
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../data/dados_fake.dart';
+import '../providers/agenda_provider.dart';
 
 class AgendarContaScreen extends StatefulWidget {
   const AgendarContaScreen({super.key});
@@ -12,17 +16,35 @@ class AgendarContaScreen extends StatefulWidget {
 
 class _AgendarContaScreenState extends State<AgendarContaScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _descricaoController = TextEditingController();
+  final _valorController = TextEditingController();
+  final _diaController = TextEditingController();
   String _tipo = 'vencimento';
 
-  void _agendar() {
+  @override
+  void dispose() {
+    _descricaoController.dispose();
+    _valorController.dispose();
+    _diaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _agendar() async {
     if (!_formKey.currentState!.validate()) return;
-    // Etapa 2: não salva (SharedPreferences entra na próxima etapa).
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Conta agendada (fictício — salva na próxima etapa).'),
-      ),
+    final conta = ContaAgendada(
+      int.parse(_diaController.text.trim()),
+      _descricaoController.text.trim(),
+      double.parse(_valorController.text.trim().replaceAll(',', '.')),
+      _tipo,
     );
-    Navigator.pop(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    // Provider adiciona e salva no SharedPreferences.
+    await context.read<AgendaProvider>().adicionar(conta);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Conta agendada.')),
+    );
+    navigator.pop();
   }
 
   @override
@@ -44,6 +66,7 @@ class _AgendarContaScreenState extends State<AgendarContaScreen> {
             ),
             const SizedBox(height: 20),
             TextFormField(
+              controller: _descricaoController,
               decoration: const InputDecoration(
                 labelText: 'Descrição',
                 hintText: 'Ex: Conta de luz',
@@ -55,6 +78,7 @@ class _AgendarContaScreenState extends State<AgendarContaScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              controller: _valorController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
@@ -75,6 +99,7 @@ class _AgendarContaScreenState extends State<AgendarContaScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              controller: _diaController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Dia do mês',

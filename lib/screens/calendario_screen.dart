@@ -2,8 +2,10 @@
 // Responsável: Rafael Penna
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dados_fake.dart';
+import '../providers/agenda_provider.dart';
 import '../theme/app_theme.dart';
 import 'agendar_conta_screen.dart';
 
@@ -23,16 +25,25 @@ class CalendarioScreen extends StatefulWidget {
 }
 
 class _CalendarioScreenState extends State<CalendarioScreen> {
-  // Mês fixo nesta etapa: Outubro de 2026.
-  static const _ano = 2026;
-  static const _mes = 10;
+  // Mostra o mês atual; as contas se repetem todo mês no mesmo dia.
+  static const _nomesMeses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho',
+    'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ];
+  final _hoje = DateTime.now();
+  int get _ano => _hoje.year;
+  int get _mes => _hoje.month;
   int? _diaSelecionado;
 
+  List<ContaAgendada> _contas = [];
+
   List<ContaAgendada> _contasDoDia(int dia) =>
-      contasAgendadas.where((c) => c.dia == dia).toList();
+      _contas.where((c) => c.dia == dia).toList();
 
   @override
   Widget build(BuildContext context) {
+    final contasAgendadas = context.watch<AgendaProvider>().contas;
+    _contas = contasAgendadas;
     final diasNoMes = DateTime(_ano, _mes + 1, 0).day;
     final primeiroDiaSemana = DateTime(_ano, _mes, 1).weekday % 7; // 0 = Dom
     final contasSelecionadas =
@@ -102,9 +113,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Text(
-                    'Outubro 2026',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    '${_nomesMeses[_mes - 1]} $_ano',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -148,7 +160,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           const SizedBox(height: 16),
           if (_diaSelecionado != null) ...[
             Text(
-              'Dia $_diaSelecionado/10',
+              'Dia $_diaSelecionado/$_mes',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -178,7 +190,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   Widget _celulaDia(int dia) {
     final contas = _contasDoDia(dia);
     final selecionado = _diaSelecionado == dia;
-    final hoje = dia == 6; // 06/10/2026
+    final hoje = dia == _hoje.day;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => setState(() {
@@ -237,7 +249,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       child: ListTile(
         leading: _ponto(cor, 12),
         title: Text(c.descricao),
-        subtitle: Text('${_rotuloTipo[c.tipo]} · dia ${c.dia}/10'),
+        subtitle: Text('${_rotuloTipo[c.tipo]} · dia ${c.dia}/$_mes'),
         trailing: Text(
           '$sinal ${formatarReais(c.valor)}',
           style: TextStyle(fontWeight: FontWeight.bold, color: cor),

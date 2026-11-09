@@ -1,49 +1,119 @@
 # Grana+
 
-App de controle financeiro pessoal — **Capstone Etapa 2 (só layout)**, squad **Granitos**.
-Disciplina: Desenvolvimento para Ambientes Móveis (Flutter).
+## 1. Identificação
 
-Integrantes: Vitória Campos, Sofia Purcino, Theo Purcino, Rafael Penna, Daniel Augusto Gonçalves.
+- **App:** Grana+ — controle financeiro pessoal
+- **Squad:** Granitos
+- **Disciplina:** Desenvolvimento para Ambientes Móveis (Flutter) — Capstone A3
 
-Visual baseado no protótipo do Figma Make. Nesta etapa **não há integração**: sem `http`,
-sem `SharedPreferences`, sem `Provider`. Todos os dados estão em `lib/data/dados_fake.dart`.
+| Integrante | Matrícula | Contato |
+|---|---|---|
+| Vitória Campos | _preencher_ | _preencher_ |
+| Sofia Purcino | _preencher_ | _preencher_ |
+| Theo Purcino | _preencher_ | _preencher_ |
+| Rafael Penna | _preencher_ | _preencher_ |
+| Daniel Augusto Gonçalves | _preencher_ | _preencher_ |
 
-## Como rodar
+## 2. Sobre o projeto
 
-```bash
-flutter create . --project-name grana_mais --platforms=android,ios,web,windows   # só na 1ª vez: gera as pastas de plataforma
-flutter pub get
-flutter run
+O Grana+ ajuda estudantes e jovens adultos a organizar a vida financeira no celular.
+O aluno entra com a **conta do Portal Cotemig** (login validado na API do Cotemig). Depois do login, o **Início** mostra o saldo, entradas, saídas, gastos no cartão, as
+**cotações do dia** (dólar, euro e libra, buscadas numa API pública) e a lista das últimas
+movimentações. Pelo botão **+** a pessoa lança uma despesa ou receita, inclusive em moeda
+estrangeira, convertida para reais pela cotação do dia. O **Calendário** mostra e agenda contas
+a pagar/receber. No **Perfil** dá para editar os dados (o endereço é preenchido pelo CEP via
+ViaCEP) e ver a **Carteira** com contas e cartões. Lançamentos, contas agendadas, perfil e
+usuário logado ficam salvos no aparelho e continuam lá ao reabrir o app.
+
+Fluxo principal:
+
 ```
-
-## Fluxo
-
-```
-Login (form) → Início ──→ Detalhe da movimentação
+Login (form) → Início ──→ Detalhe da movimentação (excluir)
                  │
   menu inferior: Início · Análises · [+] Adicionar · Calendário · Perfil
                                          │              │           │
-                                   Novo lançamento  Agendar conta  ├─ Editar perfil (form)
+                                   Novo lançamento  Agendar conta  ├─ Editar perfil (form + ViaCEP)
                                      (form)          (form)        └─ Carteira → Detalhe do cartão → Detalhe da movimentação
-Perfil → "Sair da conta" volta ao Login
+Perfil → "Sair da conta" apaga a sessão e volta ao Login
 ```
 
-## Telas e responsáveis
+## 3. Requisitos atendidos
 
-| # | Tela (ficha) | Arquivo | Responsável |
+| # | Requisito | Onde está |
+|---|---|---|
+| 1 | ≥ 4 telas com `Navigator.push` / `pop` | Login → Início → Detalhe; Adicionar; Calendário → Agendar; Perfil → Editar perfil / Carteira → Detalhe do cartão (`lib/screens/`) |
+| 2 | API REST com `http` + `async/await` | `lib/services/cotemig_service.dart` (login Cotemig), `lib/services/cotacao_service.dart` (AwesomeAPI) e `lib/services/viacep_service.dart` (ViaCEP) |
+| 3 | Loading e erro visíveis | Login: botão "Entrando…" com spinner e mensagem de erro da API (ex.: "Usuário ou senha não conferem."); card "Cotações do dia" no Início (`lib/widgets/cotacoes_card.dart`): spinner, mensagem de erro e botão "Tentar de novo"; busca de CEP em Editar perfil (spinner no campo + erro "CEP não encontrado") |
+| 4 | `Form` + `validator` | Login, Novo lançamento, Agendar conta, Editar perfil |
+| 5 | `ListView.builder` | Últimas movimentações (Início), cartões (Carteira), moedas (Novo lançamento) |
+| 6 | `SharedPreferences` persiste | `lib/services/storage_service.dart`: sessão (usuário, nome e token do Cotemig — a senha não é salva), lançamentos, contas agendadas e perfil |
+| 7 | Provider separando telas, HTTP e prefs | `lib/providers/` (estado) ← telas usam `context.watch/read`; providers chamam `lib/services/` (HTTP e prefs). Registro em `lib/main.dart` (`MultiProvider`) |
+| 8 | Abre e percorre o fluxo sem crashar | Testado em `test/fluxo_test.dart` (fluxo completo) e `test/providers_test.dart` |
+
+## 4. API e dados remotos
+
+**APIs públicas** (não há backend próprio). Nenhuma precisa de chave; a do Cotemig exige
+usuário e senha do Portal Cotemig.
+
+| API | URL base | Endpoint usado | Uso no app |
 |---|---|---|---|
-| 1 | Login | `login_screen.dart`, `main_shell.dart` | Vitória Campos |
-| 2 | Início | `home_screen.dart`, `transacao_detalhe_screen.dart` | Sofia Purcino |
-| 3 | Adicionar | `adicionar_screen.dart` | Theo Purcino |
-| 4 | Análises | `analises_screen.dart` | Rafael Penna |
-| 5 | Calendário | `calendario_screen.dart`, `agendar_conta_screen.dart` | Rafael Penna |
-| 6 | Perfil / Carteira | `perfil_screen.dart`, `editar_perfil_screen.dart`, `carteira_screen.dart`, `cartao_detalhe_screen.dart` | Daniel Augusto Gonçalves |
+| COTEMIG API ([doc](https://api-dev.cotemig.com.br/v1/doc/)) | `https://api-dev.cotemig.com.br/v1` | `POST /autenticacao` (Basic auth usuário:senha → `{ token }`), `GET /perfil` (Bearer token → nome e e-mail), `POST /sair` (invalida o token) | Login, nome na saudação e no perfil, logout |
+| AwesomeAPI (cotações) | `https://economia.awesomeapi.com.br/json/last` | `GET /USD-BRL,EUR-BRL,GBP-BRL,ARS-BRL,JPY-BRL,CAD-BRL` | Cotações do dia no Início e conversão de moeda no Novo lançamento |
+| ViaCEP | `https://viacep.com.br/ws` | `GET /{cep}/json/` (ex.: `/30140071/json/`) | Preencher endereço em Editar perfil |
 
-## Checklist da Etapa 2
+Se a AwesomeAPI falhar (sem internet ou limite de requisições), o Início mostra o erro com
+"Tentar de novo" e o Novo lançamento usa uma taxa de referência fixa, avisando na tela.
 
-- [x] Todas as 6 telas da ficha existem
-- [x] Fluxo navegável a partir do Login (`Navigator.push` / `pop`)
-- [x] Lista com ≥ 3 itens no Dart (`ListView.builder`): movimentações no Início, moedas no Adicionar, cartões na Carteira
-- [x] Formulários com `Form` + `TextFormField` + `validator`: Login, Adicionar, Agendar conta, Editar perfil
-- [x] Nenhum import de `http` nem de `shared_preferences`
-- [x] Cada arquivo de tela tem o nome do responsável num comentário no topo
+**Login de teste:** usar a matrícula/usuário e a senha do Portal Cotemig de um integrante do
+squad. Senha errada mostra "Usuário ou senha não conferem." (resposta 401 da API).
+
+## 5. Como rodar
+
+Pré-requisito: Flutter **3.35 ou mais novo** (canal stable, Dart ≥ 3.4).
+Verifique com `flutter --version`.
+
+```bash
+flutter pub get
+flutter run              # escolhe o dispositivo conectado/emulador
+flutter run -d chrome    # ou no navegador
+flutter test             # testes automatizados
+```
+
+Plataformas: Android (emulador ou celular) e Web (Chrome). As pastas `android/`, `ios/`, `web/` e
+`windows/` já estão no projeto.
+
+## 6. Backend local
+
+Não se aplica — o app usa apenas APIs públicas.
+
+## 7. Estrutura do código
+
+```
+lib/
+  main.dart            MultiProvider + escolha da tela inicial (login ou Início)
+  data/dados_fake.dart Modelos (Transacao, ContaAgendada...) + dados iniciais da 1ª abertura
+  services/            Acesso externo: HTTP (cotações, ViaCEP) e SharedPreferences
+  providers/           Estado do app (ChangeNotifier): sessão, lançamentos, agenda, perfil, cotações
+  screens/             Telas
+  widgets/             Componentes reutilizados (logo, card de resumo, card de cotações)
+  theme/               Cores, tema e formatação de R$
+test/                  Testes de widget (fluxo) e dos providers (persistência, API ok/erro)
+```
+
+| Tela | Arquivo | Responsável |
+|---|---|---|
+| Login | `login_screen.dart`, `main_shell.dart` | Vitória Campos |
+| Início | `home_screen.dart`, `transacao_detalhe_screen.dart` | Sofia Purcino |
+| Adicionar | `adicionar_screen.dart` | Theo Purcino |
+| Análises | `analises_screen.dart` | Rafael Penna |
+| Calendário | `calendario_screen.dart`, `agendar_conta_screen.dart` | Rafael Penna |
+| Perfil / Carteira | `perfil_screen.dart`, `editar_perfil_screen.dart`, `carteira_screen.dart`, `cartao_detalhe_screen.dart` | Daniel Augusto Gonçalves |
+
+## 8. Observações
+
+- **Login** usa a API do Cotemig; o token dura 90 dias e fica salvo, então o app não pede login de novo até "Sair da conta".
+- **Análises** ainda aparece como "Em breve".
+- **Carteira** (contas e cartões) usa dados de exemplo; o cadastro de conta/cartão não foi feito.
+- O seletor de mês do Início só troca o rótulo; os totais consideram todos os lançamentos.
+- Na primeira abertura o app carrega lançamentos e contas de exemplo, que podem ser excluídos.
+- A AwesomeAPI tem limite de requisições por IP; se estourar, o app mostra o erro e usa taxa de referência.

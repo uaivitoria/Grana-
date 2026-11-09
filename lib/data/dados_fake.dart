@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
-// Dados fixos do app (Etapa 2: sem API, sem SharedPreferences).
-// Tudo aqui foi escrito no código, seguindo o protótipo do Figma Make.
+// Modelos do app + dados iniciais (seed).
+// Os dados abaixo só são usados na PRIMEIRA abertura do app: depois disso,
+// lançamentos, agenda e perfil vêm do SharedPreferences (ver lib/services)
+// e as cotações das moedas vêm da API AwesomeAPI (ver CotacoesProvider).
 
 class Transacao {
   final String titulo;
   final String categoria;
   final String data;
-  final double valor; // positivo = entrada, negativo = saída
+  final double valor; // em R$; positivo = entrada, negativo = saída
   final String formaPagamento;
   final String? cartao;
   final IconData icone;
+  final String moeda; // moeda em que foi lançada (BRL, USD...)
+  final double? valorOriginal; // valor na moeda original, se não for BRL
 
   const Transacao({
     required this.titulo,
@@ -20,9 +24,73 @@ class Transacao {
     required this.formaPagamento,
     required this.icone,
     this.cartao,
+    this.moeda = 'BRL',
+    this.valorOriginal,
   });
 
   bool get isEntrada => valor >= 0;
+
+  Map<String, dynamic> toJson() => {
+        'titulo': titulo,
+        'categoria': categoria,
+        'data': data,
+        'valor': valor,
+        'formaPagamento': formaPagamento,
+        'cartao': cartao,
+        'moeda': moeda,
+        'valorOriginal': valorOriginal,
+      };
+
+  factory Transacao.fromJson(Map<String, dynamic> json) {
+    final categoria = json['categoria'] as String;
+    return Transacao(
+      titulo: json['titulo'] as String,
+      categoria: categoria,
+      data: json['data'] as String,
+      valor: (json['valor'] as num).toDouble(),
+      formaPagamento: json['formaPagamento'] as String,
+      cartao: json['cartao'] as String?,
+      icone: iconeDaCategoria(categoria),
+      moeda: (json['moeda'] as String?) ?? 'BRL',
+      valorOriginal: (json['valorOriginal'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// Ícone usado para cada categoria (o ícone não é salvo no SharedPreferences).
+IconData iconeDaCategoria(String categoria) {
+  switch (categoria) {
+    case 'Alimentação':
+      return Icons.restaurant;
+    case 'Transporte':
+      return Icons.directions_car;
+    case 'Lazer':
+      return Icons.celebration;
+    case 'Saúde':
+      return Icons.local_pharmacy;
+    case 'Moradia':
+      return Icons.home_outlined;
+    case 'Educação':
+      return Icons.school_outlined;
+    case 'Compras':
+      return Icons.shopping_bag;
+    case 'Assinaturas':
+      return Icons.tv;
+    case 'Salário':
+      return Icons.work_outline;
+    case 'Freelance':
+      return Icons.laptop_mac;
+    case 'Investimentos':
+      return Icons.trending_up;
+    case 'Venda':
+      return Icons.sell_outlined;
+    case 'Reembolso':
+      return Icons.replay;
+    case 'Presente':
+      return Icons.card_giftcard;
+    default:
+      return Icons.receipt_long;
+  }
 }
 
 class CartaoCredito {
@@ -73,7 +141,9 @@ class Moeda {
   final String codigo;
   final String nome;
   final String simbolo;
-  final double cotacaoEmReais; // fixa nesta etapa (a API vem depois)
+
+  /// Taxa de referência usada só se a API de cotações falhar.
+  final double cotacaoEmReais;
 
   const Moeda(this.codigo, this.nome, this.simbolo, this.cotacaoEmReais);
 }
@@ -85,6 +155,20 @@ class ContaAgendada {
   final String tipo; // 'receita', 'despesa' ou 'vencimento'
 
   const ContaAgendada(this.dia, this.descricao, this.valor, this.tipo);
+
+  Map<String, dynamic> toJson() => {
+        'dia': dia,
+        'descricao': descricao,
+        'valor': valor,
+        'tipo': tipo,
+      };
+
+  factory ContaAgendada.fromJson(Map<String, dynamic> json) => ContaAgendada(
+        json['dia'] as int,
+        json['descricao'] as String,
+        (json['valor'] as num).toDouble(),
+        json['tipo'] as String,
+      );
 }
 
 // ---------- Início ----------
@@ -173,59 +257,6 @@ const moedas = <Moeda>[
   Moeda('ARS', 'Peso argentino', 'AR\$', 0.006),
   Moeda('JPY', 'Iene', '¥', 0.035),
   Moeda('CAD', 'Dólar canadense', 'CA\$', 3.90),
-];
-
-// ---------- Análises ----------
-
-class ResumoMes {
-  final String mes;
-  final double receita;
-  final double despesa;
-  const ResumoMes(this.mes, this.receita, this.despesa);
-}
-
-const resumoPorPeriodo = <String, List<ResumoMes>>{
-  'Mês': [
-    ResumoMes('Sem 1', 3400, 620),
-    ResumoMes('Sem 2', 0, 780),
-    ResumoMes('Sem 3', 500, 540),
-    ResumoMes('Sem 4', 0, 900),
-  ],
-  'Trimestre': [
-    ResumoMes('Ago', 4900, 2900),
-    ResumoMes('Set', 5200, 2840),
-    ResumoMes('Out', 4850, 2430),
-  ],
-  'Semestre': [
-    ResumoMes('Mai', 4800, 3100),
-    ResumoMes('Jun', 4500, 2600),
-    ResumoMes('Jul', 5100, 3400),
-    ResumoMes('Ago', 4900, 2900),
-    ResumoMes('Set', 5200, 2840),
-    ResumoMes('Out', 4850, 2430),
-  ],
-  'Ano': [
-    ResumoMes('T1', 13200, 8100),
-    ResumoMes('T2', 13500, 8500),
-    ResumoMes('T3', 15200, 9140),
-    ResumoMes('T4', 4850, 2430),
-  ],
-};
-
-class GastoCategoria {
-  final String nome;
-  final double valor;
-  final Color cor;
-  const GastoCategoria(this.nome, this.valor, this.cor);
-}
-
-const gastosPorCategoria = <GastoCategoria>[
-  GastoCategoria('Moradia', 1200, Color(0xFF22C55E)),
-  GastoCategoria('Alimentação', 820, Color(0xFF635BFF)),
-  GastoCategoria('Transporte', 540, Color(0xFFFFC107)),
-  GastoCategoria('Lazer', 320, Color(0xFFEF4444)),
-  GastoCategoria('Outros', 280, Color(0xFF8B5CF6)),
-  GastoCategoria('Saúde', 210, Color(0xFF3B82F6)),
 ];
 
 // ---------- Calendário ----------

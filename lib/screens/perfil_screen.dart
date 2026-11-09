@@ -2,8 +2,11 @@
 // Responsável: Daniel Augusto Gonçalves
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/dados_fake.dart';
+import '../providers/perfil_provider.dart';
+import '../providers/sessao_provider.dart';
 import '../theme/app_theme.dart';
 import 'carteira_screen.dart';
 import 'editar_perfil_screen.dart';
@@ -14,6 +17,7 @@ class PerfilScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final perfil = context.watch<PerfilProvider>();
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(20),
@@ -64,12 +68,12 @@ class PerfilScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 36,
                         backgroundColor: AppColors.primary,
                         child: Text(
-                          'JS',
-                          style: TextStyle(
+                          perfil.iniciais,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -77,18 +81,18 @@ class PerfilScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              perfilNome,
-                              style: TextStyle(
+                              perfil.nome,
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text(
+                            const Text(
                               'Mais organização para conquistar seus planos.',
                               style: TextStyle(
                                 fontSize: 13,
@@ -114,11 +118,11 @@ class PerfilScreen extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 1, color: AppColors.border),
-                _info(Icons.mail_outline, 'E-mail', perfilEmail),
-                _info(Icons.phone_outlined, 'Telefone', perfilTelefone),
+                _info(Icons.mail_outline, 'E-mail', perfil.email),
+                _info(Icons.phone_outlined, 'Telefone', perfil.telefone),
                 _info(Icons.location_on_outlined, 'Endereço',
-                    '$perfilEndereco\nCEP $perfilCep'),
-                _info(Icons.public, 'Moeda padrão', perfilMoeda),
+                    '${perfil.endereco}\nCEP ${perfil.cep}'),
+                _info(Icons.public, 'Moeda padrão', perfil.moedaDescricao),
               ],
             ),
           ),
@@ -157,9 +161,11 @@ class PerfilScreen extends StatelessWidget {
               side: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
               minimumSize: const Size.fromHeight(48),
             ),
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              // Apaga o usuário salvo: ao reabrir, o app pede login de novo.
+              await context.read<SessaoProvider>().sair();
+              navigator.pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (rota) => false,
               );

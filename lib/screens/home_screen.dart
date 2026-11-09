@@ -2,9 +2,12 @@
 // Responsável: Sofia Purcino
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/dados_fake.dart';
+import '../providers/sessao_provider.dart';
+import '../providers/transacoes_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/cotacoes_card.dart';
 import '../widgets/resumo_card.dart';
 import 'transacao_detalhe_screen.dart';
 
@@ -21,9 +24,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Mês exibido no card de saldo (só troca o rótulo; os dados são fixos).
-  int _mes = 9; // Outubro
-  int _ano = 2026;
+  // Mês exibido no card de saldo (só troca o rótulo).
+  int _mes = DateTime.now().month - 1;
+  int _ano = DateTime.now().year;
 
   void _mesAnterior() {
     setState(() {
@@ -49,96 +52,127 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final nome = context.watch<SessaoProvider>().primeiroNome;
+    final dados = context.watch<TransacoesProvider>();
+    final transacoes = dados.transacoes;
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const Text(
-            'Olá, $nomeUsuario',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          Text(
+            'Olá, $nome',
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           const Text(
             'Veja como estão suas finanças.',
             style: TextStyle(color: AppColors.mutedForeground),
           ),
           const SizedBox(height: 20),
-          _cardSaldo(),
+          _cardSaldo(dados.saldo),
           const SizedBox(height: 12),
           ResumoCard(
             rotulo: 'Entradas',
-            valor: formatarReais(entradasMes),
+            valor: formatarReais(dados.entradas),
             icone: Icons.arrow_upward,
             cor: AppColors.success,
           ),
           const SizedBox(height: 12),
           ResumoCard(
             rotulo: 'Saídas',
-            valor: formatarReais(saidasMes),
+            valor: formatarReais(dados.saidas),
             icone: Icons.arrow_downward,
             cor: AppColors.error,
           ),
           const SizedBox(height: 12),
           ResumoCard(
             rotulo: 'Cartão',
-            valor: formatarReais(cartaoMes),
+            valor: formatarReais(dados.gastosCartao),
             icone: Icons.credit_card,
             cor: AppColors.foreground,
           ),
+          const SizedBox(height: 24),
+          // Dados da API REST (AwesomeAPI) com loading e erro.
+          const CotacoesCard(),
           const SizedBox(height: 24),
           const Text(
             'Últimas movimentações',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: transacoesRecentes.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(height: 1, color: AppColors.border),
-              itemBuilder: (context, i) {
-                final t = transacoesRecentes[i];
-                final cor = t.isEntrada ? AppColors.success : AppColors.primary;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: cor.withValues(alpha: 0.12),
-                    child: Icon(t.icone, color: cor, size: 20),
-                  ),
-                  title: Text(
-                    t.titulo,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text('${t.categoria} · ${t.data}'),
-                  trailing: Text(
-                    '${t.isEntrada ? '+' : '-'} ${formatarReais(t.valor.abs())}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: t.isEntrada
-                          ? AppColors.success
-                          : AppColors.foreground,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => TransacaoDetalheScreen(transacao: t),
+          if (dados.carregando)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (transacoes.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Nenhuma movimentação ainda. Toque no + para lançar.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.mutedForeground),
+                ),
+              ),
+            )
+          else
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: transacoes.length,
+                itemBuilder: (context, i) {
+                  final t = transacoes[i];
+                  final cor =
+                      t.isEntrada ? AppColors.success : AppColors.primary;
+                  return Column(
+                    children: [
+                      if (i > 0)
+                        const Divider(height: 1, color: AppColors.border),
+                      ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: cor.withValues(alpha: 0.12),
+                          child: Icon(t.icone, color: cor, size: 20),
+                        ),
+                        title: Text(
+                          t.titulo,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text('${t.categoria} · ${t.data}'),
+                        trailing: Text(
+                          '${t.isEntrada ? '+' : '-'} '
+                          '${formatarReais(t.valor.abs())}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: t.isEntrada
+                                ? AppColors.success
+                                : AppColors.foreground,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  TransacaoDetalheScreen(transacao: t),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _cardSaldo() {
+  Widget _cardSaldo(double saldo) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -202,30 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            formatarReais(saldoTotal),
+            formatarReais(saldo),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 36,
               fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.trending_up, color: Colors.white, size: 16),
-                SizedBox(width: 6),
-                Text(
-                  '$tendenciaMes este mês',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
             ),
           ),
         ],
